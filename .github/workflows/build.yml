@@ -1,0 +1,217 @@
+name: Build Native Liquid Glass App
+on: [push, workflow_dispatch]
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.7'
+
+      - name: Generate Native Code & 3D Liquid Glass Textures
+        run: |
+          mkdir -p app/src/main/java/com/personal/liquidglass
+          mkdir -p app/src/main/assets
+          mkdir -p app/src/main/res/xml
+          mkdir -p app/src/main/res/drawable-nodpi
+
+          cat << 'EOF' > settings.gradle
+          pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }
+          dependencyResolutionManagement { repositories { google(); mavenCentral() } }
+          rootProject.name = "LiquidGlass"
+          include ':app'
+          EOF
+
+          cat << 'EOF' > build.gradle
+          plugins { id 'com.android.application' version '8.3.0' apply false }
+          EOF
+
+          cat << 'EOF' > app/build.gradle
+          plugins { id 'com.android.application' }
+          android {
+              namespace 'com.personal.liquidglass'
+              compileSdk 34
+              defaultConfig {
+                  applicationId "com.personal.liquidglass"
+                  minSdk 26
+                  targetSdk 34
+                  versionCode 2
+                  versionName "2.0"
+              }
+          }
+          EOF
+
+          cat << 'EOF' > app/src/main/res/xml/appfilter.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <iconback img1="liquid_glass_base" />
+              <iconmask img1="liquid_glass_mask" />
+              <iconupon img1="liquid_glass_overlay" />
+              <scale factor="0.74" />
+          </resources>
+          EOF
+          cp app/src/main/res/xml/appfilter.xml app/src/main/assets/appfilter.xml
+
+          cat << 'EOF' > app/src/main/res/xml/drawable.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <version>1</version>
+              <category title="Liquid Glass" />
+              <item drawable="liquid_glass_overlay" />
+              <item drawable="liquid_glass_base" />
+          </resources>
+          EOF
+
+          cat << 'EOF' > app/src/main/java/com/personal/liquidglass/MainActivity.java
+          package com.personal.liquidglass;
+          import android.app.Activity;
+          import android.app.AlertDialog;
+          import android.graphics.Color;
+          import android.graphics.Typeface;
+          import android.graphics.drawable.GradientDrawable;
+          import android.os.Bundle;
+          import android.view.Gravity;
+          import android.widget.Button;
+          import android.widget.ImageView;
+          import android.widget.LinearLayout;
+          import android.widget.TextView;
+
+          public class MainActivity extends Activity {
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  LinearLayout root = new LinearLayout(this);
+                  root.setOrientation(LinearLayout.VERTICAL);
+                  root.setGravity(Gravity.CENTER);
+                  root.setBackgroundColor(Color.parseColor("#0B0F19"));
+                  root.setPadding(64, 64, 64, 64);
+
+                  ImageView preview = new ImageView(this);
+                  preview.setImageResource(R.drawable.liquid_glass_overlay);
+                  preview.setBackgroundResource(R.drawable.liquid_glass_base);
+                  LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(340, 340);
+                  lp.bottomMargin = 48;
+                  preview.setLayoutParams(lp);
+
+                  TextView title = new TextView(this);
+                  title.setText("iOS Liquid Glass");
+                  title.setTextColor(Color.WHITE);
+                  title.setTextSize(28f);
+                  title.setTypeface(Typeface.DEFAULT_BOLD);
+                  title.setGravity(Gravity.CENTER);
+
+                  TextView sub = new TextView(this);
+                  sub.setText("Universal 3D Squircle Shader • Active for All Apps");
+                  sub.setTextColor(Color.parseColor("#94A3B8"));
+                  sub.setTextSize(14f);
+                  sub.setGravity(Gravity.CENTER);
+                  sub.setPadding(0, 16, 0, 72);
+
+                  Button btn = new Button(this);
+                  btn.setText("How to Apply Icons");
+                  btn.setTextColor(Color.WHITE);
+                  btn.setAllCaps(false);
+                  GradientDrawable bg = new GradientDrawable(
+                      GradientDrawable.Orientation.TL_BR,
+                      new int[]{Color.parseColor("#3B82F6"), Color.parseColor("#1D4ED8")}
+                  );
+                  bg.setCornerRadius(48f);
+                  bg.setStroke(3, Color.parseColor("#93C5FD"));
+                  btn.setBackground(bg);
+                  btn.setPadding(64, 36, 64, 36);
+                  btn.setOnClickListener(v -> new AlertDialog.Builder(this)
+                      .setTitle("Activate iOS Liquid Glass")
+                      .setMessage("• OnePlus/Realme/Oppo: Hold home screen -> Icons -> Custom -> iOS Liquid Glass.\n\n• Samsung: Good Lock -> Theme Park -> Icon -> Create New -> Iconpack -> iOS Liquid Glass.\n\n• Other Phones: Open Nova, Lawnchair, or Smart Launcher Settings -> Icon Style -> iOS Liquid Glass.")
+                      .setPositiveButton("OK", null).show());
+
+                  root.addView(preview);
+                  root.addView(title);
+                  root.addView(sub);
+                  root.addView(btn);
+                  setContentView(root);
+              }
+          }
+          EOF
+
+          cat << 'EOF' > app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <application
+                  android:label="iOS Liquid Glass"
+                  android:icon="@drawable/liquid_glass_overlay"
+                  android:theme="@android:style/Theme.DeviceDefault.NoActionBar">
+                  <activity android:name=".MainActivity" android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="com.anddoes.launcher.THEME" />
+                      </intent-filter>
+                      <intent-filter>
+                          <action android:name="org.adw.launcher.THEMES" />
+                          <action android:name="com.novalauncher.THEME" />
+                          <action android:name="com.teslacoilsw.launcher.THEME" />
+                          <action android:name="ginlemon.smartlauncher.THEMES" />
+                          <action android:name="ch.deletescape.lawnchair.ICONPACK" />
+                          <category android:name="android.intent.category.DEFAULT" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          python3 -m pip install pillow
+          cat << 'EOF' > make_glass.py
+          from PIL import Image, ImageDraw, ImageFilter
+          S = 512
+          alpha = Image.new("L", (S, S), 0)
+          ImageDraw.Draw(alpha).rounded_rectangle([28, 28, S-28, S-28], radius=116, fill=255)
+          mask_img = Image.new("RGBA", (S, S), (0, 0, 0, 255))
+          mask_img.putalpha(Image.eval(alpha, lambda a: 255 - a))
+          mask_img.save("app/src/main/res/drawable-nodpi/liquid_glass_mask.png")
+
+          base = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+          for y in range(S):
+              for x in range(S):
+                  if alpha.getpixel((x, y)) > 0:
+                      nx, ny = x / S, y / S
+                      r = int(55 * (1 - nx) + 22 * nx + 35 * (ny ** 2))
+                      g = int(70 * (1 - ny) + 28 * ny + 45 * (ny ** 2))
+                      b = int(105 * (1 - nx * ny) + 60 * (nx * ny))
+                      a = int(190 + 45 * ny)
+                      base.putpixel((x, y), (min(r,255), min(g,255), min(b,255), min(a,255)))
+          base.save("app/src/main/res/drawable-nodpi/liquid_glass_base.png")
+
+          overlay = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+          gloss = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+          ImageDraw.Draw(gloss).ellipse([-80, -160, S + 80, int(S * 0.48)], fill=(255, 255, 255, 110))
+          gloss = gloss.filter(ImageFilter.GaussianBlur(18))
+
+          caustic = Image.new("RGBA", (S, S), (0, 0, 0, 0))
+          ImageDraw.Draw(caustic).rounded_rectangle([44, int(S*0.65), S-44, S-34], radius=90, outline=(180, 225, 255, 95), width=8)
+          caustic = caustic.filter(ImageFilter.GaussianBlur(10))
+
+          overlay.paste(Image.alpha_composite(gloss, caustic), (0, 0), alpha)
+          rim = ImageDraw.Draw(overlay)
+          rim.rounded_rectangle([28, 28, S-28, S-28], radius=116, outline=(255, 255, 255, 215), width=5)
+          rim.rounded_rectangle([33, 33, S-33, S-33], radius=111, outline=(255, 255, 255, 65), width=3)
+          overlay.save("app/src/main/res/drawable-nodpi/liquid_glass_overlay.png")
+          EOF
+          python3 make_glass.py
+
+      - name: Compile APK
+        run: gradle assembleDebug
+
+      - name: Upload Ready APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: iOS-Liquid-Glass-v2-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
+          
